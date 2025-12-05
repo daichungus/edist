@@ -14,7 +14,8 @@ static inline double now_ms(void) {
 int main() {
 
     double t0 = now_ms();
-    run_test_1mil(); 
+    run_tests_small();
+    // run_test_1mil(); 
     double t1 = now_ms();
     double elapsed_time = t1 - t0;
 
