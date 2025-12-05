@@ -512,7 +512,7 @@ void test_65_diff() {
 
 }
 
-// Test 1 million-length strings. Dunno actual edit distance.
+// Test random strings. Don't actual edit distance.
 void test_the_beast() {
 
     size_t len = 1000000;
@@ -520,7 +520,7 @@ void test_the_beast() {
     char *str1 = gen_random_range(len, 'a', 'Z');
     char *str2 = gen_random_range(len, 'a', 'Z');
 
-    printf("Calculating edit distance of two %zu length strings...\n", len);
+    printf("Length: %zu\n", len);
     const int result = edit_distance(str1, str2, len);
 
     free(str1);
