@@ -31,7 +31,7 @@ int main() {
     double t1 = now_ms();
 
     // Determine elapsed time
-    printf("Elapsed time: ");
+    printf("Total elapsed time: ");
     printf_ms(t1 - t0);
     return 0;
 }

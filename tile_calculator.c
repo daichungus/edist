@@ -13,6 +13,23 @@ static inline long now_ns(void) {
 	return ts.tv_sec * 1000000000L + ts.tv_nsec;
 }
 
+// Format the elapsed time
+static inline void printf_ns(long t) {
+	if (t > 3.6e+12) {
+		printf("%.6Lf hr\n", t / 3.6e+12L);
+	} else if (t > 6e+10) {
+		printf("%.6Lf min\n", t / 6e+10L);
+	} else if (t > 1e+9) {
+		printf("%.6Lf s\n", t / 1e+9L);
+	} else if (t > 1e+6) {
+		printf("%.6Lf ms\n", t / 1e+6L);
+	} else if (t > 1000) {
+		printf("%ld %cs\n", t / 1000, 230);
+	} else {
+		printf("%ld ns\n", t);
+	}
+}
+
 // Helper to generate dummy data
 static inline char *gen_dummy(size_t len) {
     char *s = malloc(len + 1);
@@ -21,8 +38,10 @@ static inline char *gen_dummy(size_t len) {
     return s;
 }
 
-// Calculate the most consistently fast tile size. May not always be the absolute fastest
+// Calculate the most curenntly fastest tile size. 
+// May not always be the absolute fastest due to CPU processes and environmental variables
 size_t calculate_tile() {
+	long t0 = now_ns();
     const size_t BENCH_LEN = 32768; 
     char *s1 = gen_dummy(BENCH_LEN);
     char *s2 = gen_dummy(BENCH_LEN);
@@ -53,6 +72,10 @@ size_t calculate_tile() {
         }
         
     }
+	
+	long t1 = now_ns();
+	printf("Elapsed time: ");
+	printf_ns(t1 - t0);
 
     free(s1);
     free(s2);

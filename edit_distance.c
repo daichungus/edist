@@ -189,7 +189,7 @@ void *worker_thread(void *arg) {
     // Diagonal wavefront
     for (size_t wave = 0; wave < total_waves; wave++) {
 
-        size_t ti_min = (wave < num_tiles_i) ? 0 : (wave - num_tiles_j + 1);
+        size_t ti_min = (wave < num_tiles_j) ? 0 : (wave - num_tiles_j + 1);
         size_t ti_max = (wave < num_tiles_i) ? wave : (num_tiles_i - 1);
 
         // Iterate through the tile
