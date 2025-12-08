@@ -9,6 +9,7 @@
 #include <sched.h>
 #include <stdio.h>
 #include "edit_distance.h"
+#include "tile_calculator.h"
 
 #define cost(a, b) (a == b) ? 0 : 1
 #define min(a, b) (((a) < (b)) ? (a) : (b))
@@ -244,26 +245,10 @@ void *worker_thread(void *arg) {
     return NULL;
 }
 
-int edit_distance(const char *str1, const char *str2, size_t len) {
-    
-    if (len == 0) {
-        return 0;
-    }
-
-    if (len == 1) {
-        return cost(str1[0], str2[0]);
-    }
-
-    
-    // Set up threads and barrier
-    long nproc = sysconf(_SC_NPROCESSORS_ONLN);
-    if (nproc < 1) {
-        nproc = 1;
-    }
+// Calculate edit distance with specific tile size and number of threads
+int edit_distance_base(const char *str1, const char *str2, size_t len, size_t tile_size, size_t num_threads) {
     
     // Determine number of tiles needed
-    size_t tile_size = opt_tilesize(len, (size_t)nproc);
-
     size_t num_tiles_i = (len + tile_size - 1) / tile_size;
     size_t num_tiles_j = (len + tile_size - 1) / tile_size;
 
@@ -289,15 +274,13 @@ int edit_distance(const char *str1, const char *str2, size_t len) {
 
     // Limit the number of threads
     size_t min_dimension = min(num_tiles_i, num_tiles_j);
-
-    size_t num_threads = (size_t)nproc;
     
     if (num_threads > min_dimension) {
         num_threads = min_dimension;
     }
     if (len <= tile_size) {
         num_threads = 1;
-    }
+    }   
 	
 	printf("Tile size: %zu\n", tile_size);
     printf("Number of threads: %zu\n", num_threads);
@@ -341,4 +324,34 @@ int edit_distance(const char *str1, const char *str2, size_t len) {
     free(corners);
     
     return result;
+}
+
+// Wrapper
+int edit_distance(const char *str1, const char *str2, size_t len) {
+    if (len == 0) {
+        return 0;
+    }
+
+    if (len == 1) {
+        return cost(str1[0], str2[0]);
+    }
+
+    // Set up threads and barrier
+    long nproc = sysconf(_SC_NPROCESSORS_ONLN);
+    if (nproc < 1) {
+        nproc = 1;
+    }
+
+    size_t tile_size;
+    if (len < 16384) {
+        tile_size = opt_tilesize(len, (size_t)nproc);
+    } else {
+        tile_size = calculate_tile((size_t)nproc);
+    }
+
+    size_t num_tiles_i = (len + tile_size - 1) / tile_size;
+    size_t num_threads = (size_t)nproc;
+    if (num_threads > num_tiles_i) num_threads = num_tiles_i;
+
+    return edit_distance_base(str1, str2, len, tile_size, num_threads);
 }
