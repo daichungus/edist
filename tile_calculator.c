@@ -22,7 +22,7 @@ static inline char *gen_dummy(size_t len) {
 }
 
 // Calculate the most consistently fast tile size. May not always be the absolute fastest
-size_t calculate_tile(size_t num_threads) {
+size_t calculate_tile() {
     const size_t BENCH_LEN = 32768; 
     char *s1 = gen_dummy(BENCH_LEN);
     char *s2 = gen_dummy(BENCH_LEN);
@@ -33,7 +33,7 @@ size_t calculate_tile(size_t num_threads) {
     long best_time = LONG_MAX;
     size_t best_size = 2048;
 
-    printf("Finding best tile size on %zu threads...\n", num_threads);
+    printf("Finding best tile size...\n");
 
     for (size_t i = 0; i < num_candidates; i++) {
         size_t ts = candidates[i];
@@ -42,7 +42,7 @@ size_t calculate_tile(size_t num_threads) {
 
         long t0 = now_ns();
 
-        edit_distance_base(s1, s2, BENCH_LEN, ts, num_threads);
+        edit_distance_base(s1, s2, BENCH_LEN, ts, 1);
 
         long t1 = now_ns();
         long time = t1 - t0;

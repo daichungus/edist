@@ -3,6 +3,6 @@
 
 #include <stddef.h>
 
-size_t calculate_tile(size_t num_threads);
+size_t calculate_tile();
 
 #endif

@@ -343,7 +343,7 @@ int edit_distance(const char *str1, const char *str2, size_t len) {
     if (len < 16384) {
         tile_size = opt_tilesize(len, (size_t)nproc);
     } else {
-        tile_size = calculate_tile((size_t)nproc);
+        tile_size = calculate_tile();
     }
 
     size_t num_tiles_i = (len + tile_size - 1) / tile_size;
