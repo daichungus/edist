@@ -280,10 +280,7 @@ int edit_distance_base(const char *str1, const char *str2, size_t len, size_t ti
     }
     if (len <= tile_size) {
         num_threads = 1;
-    }   
-	
-	printf("Tile size: %zu\n", tile_size);
-    printf("Number of threads: %zu\n", num_threads);
+    }
 
     pthread_t threads[num_threads];
     struct ThreadArgs t_args[num_threads];
@@ -352,6 +349,9 @@ int edit_distance(const char *str1, const char *str2, size_t len) {
     size_t num_tiles_i = (len + tile_size - 1) / tile_size;
     size_t num_threads = (size_t)nproc;
     if (num_threads > num_tiles_i) num_threads = num_tiles_i;
+
+    printf("Tile size: %zu\n", tile_size);
+    printf("Number of threads: %zu\n", num_threads);
 
     return edit_distance_base(str1, str2, len, tile_size, num_threads);
 }
