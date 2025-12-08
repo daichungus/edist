@@ -42,7 +42,7 @@ size_t calculate_tile(size_t num_threads) {
 
         long t0 = now_ns();
 
-        edit_distance_base(s1, s2, BENCH_LEN, ts, num_threads);
+        edit_distance_base(s1, s2, BENCH_LEN, BENCH_LEN, ts, num_threads);
 
         long t1 = now_ns();
         long time = t1 - t0;
