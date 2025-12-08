@@ -57,6 +57,10 @@ void run_tests_small() {
     test_small("margatroid", "spellcheck", 10, 10);
 }
 
+void run_test_random(size_t len) {
+    test_rand_string(len);
+}
+
 void run_test_1mil() {
     test_rand_string(1000000);
 }

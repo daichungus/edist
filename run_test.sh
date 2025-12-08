@@ -15,7 +15,18 @@ echo | tee -a "$LOG_FILE"
 N="3"
 for i in $(seq 1 $N)
 do
+	printf "GCC: " | tee -a "$LOG_FILE"
+	echo | tee -a "$LOG_FILE"
 	./edist | tee -a "$LOG_FILE"
+	echo | tee -a "$LOG_FILE"
+
+	make clean
+	
+	make CC=clang
+	printf "CLANG: " | tee -a "$LOG_FILE"
+	echo | tee -a "$LOG_FILE"
+	./edist | tee -a "$LOG_FILE"
+	echo | tee -a "$LOG_FILE"
 done 
 
 printf "END: " | tee -a "$LOG_FILE"

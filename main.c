@@ -3,6 +3,7 @@
 
 void run_tests_small(void);
 void run_test_1mil(void);
+void run_test_random(size_t len);
 
 // Get the time now in miliseconds
 static inline double now_ms(void) {
@@ -27,7 +28,8 @@ int main() {
 
     double t0 = now_ms();
     // run_tests_small();
-    run_test_1mil(); 
+    // run_test_1mil(); 
+    run_test_random(100000);
     double t1 = now_ms();
 
     // Determine elapsed time
