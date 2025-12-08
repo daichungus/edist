@@ -11,25 +11,27 @@ static inline double now_ms(void) {
 	return (double)ts.tv_sec * 1000.0 + (double)ts.tv_nsec / 1e6;
 }
 
+static inline void printf_ms(double t) {
+    if (t > 3.6e+6) {
+        printf("%.6f hr\n", t / 3.6e+6);
+    } else if (t > 60000.0) {
+        printf("%.6f min\n", t / 60000.0);
+    } else if (t > 1000.0) {
+        printf("%.6f s\n", t / 1000.0);
+    } else {
+        printf("%.6f ms\n", t);
+    }
+}
+
 int main() {
 
     double t0 = now_ms();
-    run_tests_small();
-    // run_test_1mil(); 
+    // run_tests_small();
+    run_test_1mil(); 
     double t1 = now_ms();
-    double elapsed_time = t1 - t0;
 
-    // Determine elapsed time units
-    if (elapsed_time > 3.6e+6) {
-        printf("Elapsed time: %.6f hr\n", elapsed_time / 3.6e+6);
-    } else if (elapsed_time > 60000.0) {
-        printf("Elapsed time: %.6f min\n", elapsed_time / 60000.0);
-    } else if (elapsed_time > 1000.0) {
-        printf("Elapsed time: %.6f s\n", elapsed_time / 1000.0);
-    } else {
-        printf("Elapsed time: %.6f ms\n", elapsed_time);
-    }
-    printf("\n");
-
+    // Determine elapsed time
+    printf("Elapsed time: ");
+    printf_ms(t1 - t0);
     return 0;
 }
