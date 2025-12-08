@@ -201,7 +201,7 @@ void *worker_thread(void *arg) {
     // Diagonal wavefront
     for (size_t wave = 0; wave < total_waves; wave++) {
 
-        size_t ti_min = (wave < num_tiles_j) ? 0 : (wave - num_tiles_j + 1);
+        size_t ti_min = (wave < num_tiles_j) ? 0 : (wave - num_tiles_j + 1); // This was "the one thing"
         size_t ti_max = (wave < num_tiles_i) ? wave : (num_tiles_i - 1);
 
         // Iterate through the tile
@@ -307,7 +307,7 @@ int edit_distance_base(const char *str1, const char *str2, size_t len1, size_t l
     
     // Spawn worker threads
     for (size_t i = 0; i < num_threads; i++) {
-        t_args[i]. barrier = &barrier;
+        t_args[i].barrier = &barrier;
         t_args[i].str1 = str1;
         t_args[i].str2 = str2;
         t_args[i].row_edge = row_edge;
