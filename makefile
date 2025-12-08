@@ -12,6 +12,7 @@ all: $(TARGET_GCC)
 
 $(TARGET_GCC): $(OBJS_GCC)
 	$(CC_GCC) $(CFLAGS) -o $@ $^
+	rm -f *.o
 
 %.gcc.o: %.c
 	$(CC_GCC) $(CFLAGS) -c -o $@ $< 
