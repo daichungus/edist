@@ -59,12 +59,13 @@ static inline __m256i avx_min3(__m256i a, __m256i b, __m256i c) {
 }
 
 // Inter-tile operation
-void compute_tile_avx(const char *str1p, const char *str2p, size_t tile_size, size_t h, size_t w, size_t str1_global_offset, size_t str2_global_offset, size_t len1, size_t len2, int topleft, int *row_edgep, int *col_edgep, int *corner_outp) {
+void compute_tile_avx(const char *str1p, const char *str2p, size_t h, size_t w, size_t str1_global_offset, size_t str2_global_offset, size_t len1, size_t len2, int topleft, int *row_edgep, int *col_edgep, int *corner_outp) {
 
     // AVX diagonal buffers
-    __attribute__((aligned(32))) int buffer_prevprev[tile_size + 8];
-    __attribute__((aligned(32))) int buffer_prev[tile_size + 8];
-    __attribute__((aligned(32))) int buffer_curr[tile_size + 8];
+    size_t max_dim = max(h, w);
+    __attribute__((aligned(32))) int buffer_prevprev[max_dim + 8];
+    __attribute__((aligned(32))) int buffer_prev[max_dim + 8];
+    __attribute__((aligned(32))) int buffer_curr[max_dim + 8];
 
     // Pointers to the buffers
     int *d_prevprev = &buffer_prevprev[1];
@@ -123,7 +124,10 @@ void compute_tile_avx(const char *str1p, const char *str2p, size_t tile_size, si
 
             // Calculate cost
             __m256i v_cost_sub = _mm256_add_epi32(vec_sub, v_ones);
+            // __m256i v_match_mask = _mm256_and_si256(v_match, v_ones); // 1 if match, 0 if not
+            // __m256i v_cost_match = _mm256_sub_epi32(v_ones, v_match_mask); // 1 if no match, 0 if not
             v_cost_sub = _mm256_add_epi32(v_cost_sub, v_match);
+
             __m256i v_cost_ins = _mm256_add_epi32(vec_ins, v_ones);
             __m256i v_cost_del = _mm256_add_epi32(vec_del, v_ones);
             __m256i v_result = avx_min3(v_cost_del, v_cost_ins, v_cost_sub);
@@ -136,10 +140,10 @@ void compute_tile_avx(const char *str1p, const char *str2p, size_t tile_size, si
             int prev_del = d_prev[k-1];
             int prev_ins = d_prev[k];
             int prev_sub = d_prevprev[k-1];
-                
+
             size_t str1_idx = str1_global_offset + k;
             size_t str2_idx = str2_global_offset + wave - k;
-            
+
             // Bounds checking for safety
             int c = 0;
             if (str1_idx < len1 && str2_idx < len2) {
@@ -159,12 +163,16 @@ void compute_tile_avx(const char *str1p, const char *str2p, size_t tile_size, si
 
         if (end == h - 1) {
             size_t col_index = wave - (h - 1);
-            row_edgep[col_index] = d_curr[h - 1];
+            if (col_index < w) {
+                row_edgep[col_index] = d_curr[h - 1];    
+            }
         }
 
-        if (start == wave - w  + 1) {
+        if (start == wave - w + 1 && wave >= w - 1) {
             size_t row_index = start;
-            col_edgep[row_index] = d_curr[row_index];
+            if (row_index < h) {
+                col_edgep[row_index] = d_curr[row_index];
+            }
         }
 
         if (wave == maxwave) {
@@ -238,7 +246,6 @@ void *worker_thread(void *arg) {
             compute_tile_avx(
                 &str1[i_start - 1], 
                 &str2[j_start - 1],
-                tile_size, 
                 tile_height, 
                 tile_width, 
                 i_start - 1,
@@ -269,8 +276,9 @@ int edit_distance_base(const char *str1, const char *str2, size_t len1, size_t l
     size_t num_tiles_j = (len2 + tile_size - 1) / tile_size;
 
     // Allocate buffers for tile edges and corner values
-    int *row_edge = (int *)malloc((len2 + 1) * sizeof(int));
-    int *col_edge = (int *)malloc((len1 + 1) * sizeof(int));
+    size_t max_len = max(len1, len2);
+    int *row_edge = (int *)malloc((max_len + 1) * sizeof(int));
+    int *col_edge = (int *)malloc((max_len + 1) * sizeof(int));
     int *corners = (int *)malloc(num_tiles_j * sizeof(int));
 
     if (!row_edge || !col_edge || !corners) {
@@ -294,7 +302,6 @@ int edit_distance_base(const char *str1, const char *str2, size_t len1, size_t l
     if (num_threads > min_dimension) {
         num_threads = min_dimension;
     }
-    size_t max_len = max(len1, len2);
     if (max_len <= tile_size) {
         num_threads = 1;
     }
