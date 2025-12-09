@@ -1,0 +1,74 @@
+START: Tue Dec  9 15:52:24 EST 2025
+
+Length: 1000000
+Finding best tile size...
+Elapsed time: 6.006560 s
+Tile size: 32768
+Number of threads: 31
+Calculated edit distance: 626042
+Total elapsed time: 1.312387 min
+Length: 1000000
+Finding best tile size...
+Elapsed time: 5.915140 s
+Tile size: 32768
+Number of threads: 31
+Calculated edit distance: 625763
+Total elapsed time: 1.287545 min
+Length: 1000000
+Finding best tile size...
+Elapsed time: 5.902138 s
+Tile size: 16384
+Number of threads: 62
+Calculated edit distance: 625693
+Total elapsed time: 1.393064 min
+Length: 1000000
+Finding best tile size...
+Elapsed time: 5.896913 s
+Tile size: 16384
+Number of threads: 62
+Calculated edit distance: 625927
+Total elapsed time: 1.382652 min
+Length: 1000000
+Finding best tile size...
+Elapsed time: 5.893467 s
+Tile size: 16384
+Number of threads: 62
+Calculated edit distance: 625866
+Total elapsed time: 1.372723 min
+Length: 1000000
+Finding best tile size...
+Elapsed time: 5.911613 s
+Tile size: 32768
+Number of threads: 31
+Calculated edit distance: 625909
+Total elapsed time: 1.369114 min
+Length: 1000000
+Finding best tile size...
+Elapsed time: 5.934189 s
+Tile size: 8192
+Number of threads: 123
+Calculated edit distance: 625935
+Total elapsed time: 1.619733 min
+Length: 1000000
+Finding best tile size...
+Elapsed time: 5.921948 s
+Tile size: 16384
+Number of threads: 62
+Calculated edit distance: 625935
+Total elapsed time: 1.452709 min
+Length: 1000000
+Finding best tile size...
+Elapsed time: 5.923138 s
+Tile size: 16384
+Number of threads: 62
+Calculated edit distance: 626033
+Total elapsed time: 1.344814 min
+Length: 1000000
+Finding best tile size...
+Elapsed time: 5.902325 s
+Tile size: 8192
+Number of threads: 123
+Calculated edit distance: 625676
+Total elapsed time: 1.672118 min
+END: Tue Dec  9 16:06:37 EST 2025
+
