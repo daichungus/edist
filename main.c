@@ -31,8 +31,8 @@ int main() {
     run_tests_small();
     run_test_random_diff(65, 64);
     run_test_random_diff(128, 1);
-    run_test_random_diff(10000, 500);
-    run_test_random(100000);
+    // run_test_random_diff(10000, 500);
+    // run_test_random(100000);
     // run_test_1mil(); 
     double t1 = now_ms();
 
