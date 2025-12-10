@@ -66,35 +66,28 @@ void compute_tile_avx(const char *str1p, const char *str2p,
                         size_t str1_global_offset, size_t str2_global_offset, 
                         size_t len1, size_t len2, 
                         int topleft, int *row_edgep, int *col_edgep, int *corner_outp) {
+    // Allocate flat 1D buffer for the tile matrix
+    size_t tile_size_flat = (h + 1) * (w + 1);
+    int *tile_flat = (int *)malloc(tile_size_flat * sizeof(int));
+    
+    // Helper macro for accessing:  tile[i][j] -> tile_flat[i * (w+1) + j]
+    #define TILE(i, j) tile_flat[(i) * (w + 1) + (j)]
+    // Initialize first row and column from input edges
 
-    // Allocate diagonal buffers
-    size_t maxwave = h + w - 2;
-    __attribute__((aligned(32))) int buffer_prevprev[maxwave + 8];
-    __attribute__((aligned(32))) int buffer_prev[maxwave + 8];
-    __attribute__((aligned(32))) int buffer_curr[maxwave + 8];
+    TILE(0,0) = topleft;
+    for (size_t j = 0; j < w; j++) {
+        TILE(0, j + 1) = row_edgep[j];
+    }
 
-    int *d_prevprev = &buffer_prevprev[1];
-    int *d_prev = &buffer_prev[1];
-    int *d_curr = &buffer_curr[1];
+    for (size_t i = 0; i < h; i++) {
+        TILE(i + 1, 0) = col_edgep[i];
+    }
 
     // Initialize vector of 1's
     const __m256i v_ones = _mm256_set1_epi32(1);
 
+    size_t maxwave = h + w - 2;
     for (size_t wave = 0; wave <= maxwave; wave++) {
-
-        if (wave < w) {
-            d_prev[-1] = row_edgep[wave];
-            if (wave == 0) {
-                d_prevprev[-1] = topleft;
-            } else {
-                d_prevprev[-1] = row_edgep[wave - 1];
-            }
-        }
-
-        if (wave < h) {
-            d_prev[wave] = col_edgep[wave];
-        }
-        
         size_t i_min = (wave < w) ? 0 : (wave - w + 1);
         size_t i_max = (wave < h) ? wave : (h - 1);
 
@@ -106,55 +99,66 @@ void compute_tile_avx(const char *str1p, const char *str2p,
             size_t global_str2_base = str2_global_offset + (wave - k);
 
             // Check if elements are within bounds
-            if (global_str1_base + 8 <= len1 && 
-                global_str2_base >= 7 && 
-                global_str2_base - 7 >= str2_global_offset) {
-                
-                long long str1_chunk;
-                memcpy(&str1_chunk, &str1p[k], sizeof(long long));
-
-                __m128i s1_vec = _mm_cvtsi64_si128(str1_chunk);
-                __m256i char1_vec = _mm256_cvtepu8_epi32(s1_vec);
-
-                __m256i char2_vec = _mm256_set_epi32(
-                    (unsigned char)str2p[wave - (k + 7)], 
-                    (unsigned char)str2p[wave - (k + 6)], 
-                    (unsigned char)str2p[wave - (k + 5)], 
-                    (unsigned char)str2p[wave - (k + 4)], 
-                    (unsigned char)str2p[wave - (k + 3)], 
-                    (unsigned char)str2p[wave - (k + 2)], 
-                    (unsigned char)str2p[wave - (k + 1)], 
-                    (unsigned char)str2p[wave - (k)]
-                );
-
-                __m256i vec_ins = _mm256_loadu_si256((__m256i*)&d_prev[k]);
-                __m256i vec_del = _mm256_loadu_si256((__m256i*)&d_prev[k - 1]);
-                __m256i vec_sub = _mm256_loadu_si256((__m256i*)&d_prevprev[k - 1]);
-
-                // Compare characters and calculate cost
-                __m256i v_match = _mm256_cmpeq_epi32(char1_vec, char2_vec);
-                __m256i v_cost_sub = _mm256_add_epi32(vec_sub, v_ones);
-                v_cost_sub = _mm256_add_epi32(v_cost_sub, v_match);
-
-                __m256i v_cost_ins = _mm256_add_epi32(vec_ins, v_ones);
-                __m256i v_cost_del = _mm256_add_epi32(vec_del, v_ones);
-                __m256i v_result = avx_min3(v_cost_del, v_cost_ins, v_cost_sub);
-
-                _mm256_storeu_si256((__m256i*)&d_curr[k], v_result);
-
-            } else {
-                // Fall back to scalar loop
+            if (global_str1_base + 8 > len1 || 
+                global_str2_base < 7 ||
+                k + h > 2) {
                 break;
             }
-            
+
+            long long str1_chunk;
+            memcpy(&str1_chunk, &str1p[global_str1_base], sizeof(long long));
+            __m128i s1_vec = _mm_cvtsi64_si128(str1_chunk);
+            __m256i char1_vec = _mm256_cvtepu8_epi32(s1_vec);
+
+            __m256i char2_vec = _mm256_set_epi32(
+                (unsigned char)str2p[global_str2_base - 7],
+                (unsigned char)str2p[global_str2_base - 6],
+                (unsigned char)str2p[global_str2_base - 5],
+                (unsigned char)str2p[global_str2_base - 4],
+                (unsigned char)str2p[global_str2_base - 3],
+                (unsigned char)str2p[global_str2_base - 2],
+                (unsigned char)str2p[global_str2_base - 1],
+                (unsigned char)str2p[global_str2_base]
+            );
+
+            // Compare characters and calculate cost
+            __m256i v_match = _mm256_cmpeq_epi32(char1_vec, char2_vec);
+
+            // Load from flat buffer safely
+            __m256i vec_sub, vec_ins, vec_del;
+
+            // Read diagonal (substitution)
+            for (int idx = 0; idx < 8; idx++) {
+                ((int *)&vec_sub)[idx] = TILE(k + idx, wave - k);
+            }
+
+            // Read left (insertion)
+            for (int idx = 0; idx < 8; idx++) {
+                ((int *)&vec_ins)[idx] = TILE(k + idx + 1, wave - k);
+            }
+
+            // Read top (deletion)
+            for (int idx = 0; idx < 8; idx++) {
+                ((int *)&vec_del)[idx] = TILE(k + idx, wave - k + 1);
+            }
+
+            __m256i v_cost_sub = _mm256_add_epi32(vec_sub, v_ones);
+            v_cost_sub = _mm256_add_epi32(v_cost_sub, v_match);
+
+            __m256i v_cost_ins = _mm256_add_epi32(vec_ins, v_ones);
+
+            __m256i v_cost_del = _mm256_add_epi32(vec_del, v_ones);
+
+            __m256i v_result = avx_min3(v_cost_del, v_cost_ins, v_cost_sub);
+
+            // Store result
+            for (int idx = 0; idx < 8; idx++) {
+                TILE(k + idx + 1, wave - k + 1) = ((int *)&v_result)[idx];
+            }
         }
 
         // Scalar loop for bounds
         for (; k <= i_max; k++) {
-            int prev_del = d_prev[k-1];
-            int prev_ins = d_prev[k];
-            int prev_sub = d_prevprev[k-1];
-
             size_t global_str1_idx = str1_global_offset + k;
             size_t global_str2_idx = str2_global_offset + wave - k;
 
@@ -165,38 +169,27 @@ void compute_tile_avx(const char *str1p, const char *str2p,
                 c = 1; // Out-of-bounds mismatch cost
             }
 
-            int val = min3(prev_del + 1, prev_ins + 1, prev_sub + c);
-            d_curr[k] = val;
+            int val = min3(
+                TILE(k, wave - k + 1) + 1, 
+                TILE(k + 1, wave - k) + 1, 
+                TILE(k, wave - k) + c
+            );
+
+            TILE(k + 1, wave - k + 1) = val;
         }
-
-        // Export edge values
-        size_t start = i_min;
-        size_t end = i_max;
-
-        if (end == h - 1) {
-            size_t col_index = wave - (h - 1);
-            if (col_index < w) {
-                row_edgep[col_index] = d_curr[h - 1];    
-            }
-        }
-
-        if (start == wave - w + 1 && wave >= w - 1) {
-            size_t row_index = start;
-            if (row_index < h) {
-                col_edgep[row_index] = d_curr[row_index];
-            }
-        }
-
-        if (wave == maxwave) {
-            *corner_outp = d_curr[h-1];
-        }
-
-        // Swap buffer pointers
-        int *temp = d_prevprev;
-        d_prevprev = d_prev;
-        d_prev = d_curr;
-        d_curr = temp;
     }
+
+    for (size_t j = 0; j < w; j++) {
+        row_edgep[j] = TILE(h, j + 1);
+    }
+    for (size_t i = 0; i < h; i++) {
+        col_edgep[i] = TILE(i + 1, w);
+    }
+
+    *corner_outp = TILE(h, w);
+
+    free(tile_flat);
+    #undef TILE
 }
 
 void *worker_thread(void *arg) {
