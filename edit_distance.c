@@ -39,13 +39,15 @@ struct ThreadArgs {
     
     const char *str1;
     const char *str2;
-    int *row_edge;
-    int *col_edge;
-    int *corners;
+    
+    int *g_top_row;
+    int *g_left_col;
+    int **vdp;
 
+    size_t tile_size;
     size_t len1;
     size_t len2;
-    size_t tile_size;
+
     size_t num_tiles_i;
     size_t num_tiles_j;
 
@@ -59,15 +61,18 @@ static inline __m256i avx_min3(__m256i a, __m256i b, __m256i c) {
 }
 
 // Inter-tile operation
-void compute_tile_avx(const char *str1p, const char *str2p, size_t h, size_t w, size_t str1_global_offset, size_t str2_global_offset, size_t len1, size_t len2, int topleft, int *row_edgep, int *col_edgep, int *corner_outp) {
+void compute_tile_avx(const char *str1p, const char *str2p, 
+                        size_t h, size_t w, 
+                        size_t str1_global_offset, size_t str2_global_offset, 
+                        size_t len1, size_t len2, 
+                        int topleft, int *row_edgep, int *col_edgep, int *corner_outp) {
 
-    // AVX diagonal buffers
-    size_t max_dim = max(h, w);
-    __attribute__((aligned(32))) int buffer_prevprev[max_dim + 8];
-    __attribute__((aligned(32))) int buffer_prev[max_dim + 8];
-    __attribute__((aligned(32))) int buffer_curr[max_dim + 8];
+    // Allocate diagonal buffers
+    size_t maxwave = h + w - 2;
+    __attribute__((aligned(32))) int buffer_prevprev[maxwave + 8];
+    __attribute__((aligned(32))) int buffer_prev[maxwave + 8];
+    __attribute__((aligned(32))) int buffer_curr[maxwave + 8];
 
-    // Pointers to the buffers
     int *d_prevprev = &buffer_prevprev[1];
     int *d_prev = &buffer_prev[1];
     int *d_curr = &buffer_curr[1];
@@ -75,12 +80,10 @@ void compute_tile_avx(const char *str1p, const char *str2p, size_t h, size_t w, 
     // Initialize vector of 1's
     const __m256i v_ones = _mm256_set1_epi32(1);
 
-    size_t maxwave = h + w - 2;
     for (size_t wave = 0; wave <= maxwave; wave++) {
 
         if (wave < w) {
             d_prev[-1] = row_edgep[wave];
-
             if (wave == 0) {
                 d_prevprev[-1] = topleft;
             } else {
@@ -96,68 +99,77 @@ void compute_tile_avx(const char *str1p, const char *str2p, size_t h, size_t w, 
         size_t i_max = (wave < h) ? wave : (h - 1);
 
         size_t k = i_min;
+
         for (; k + 7 <= i_max; k += 8) {
-            __m256i vec_ins = _mm256_loadu_si256((__m256i*)&d_prev[k]);
-            __m256i vec_del = _mm256_loadu_si256((__m256i*)&d_prev[k - 1]);
-            __m256i vec_sub = _mm256_loadu_si256((__m256i*)&d_prevprev[k - 1]);
-
             // Load string 1 and string 2 chunks
-            long long str1_chunk;
-            memcpy(&str1_chunk, &str1p[k], sizeof(long long));
+            size_t global_str1_base = str1_global_offset + k;
+            size_t global_str2_base = str2_global_offset + (wave - k);
 
-            __m128i s1_vec = _mm_cvtsi64_si128(str1_chunk);
-            __m256i char1_vec = _mm256_cvtepu8_epi32(s1_vec);
+            // Check if elements are within bounds
+            if (global_str1_base + 8 <= len1 && 
+                global_str2_base >= 7 && 
+                global_str2_base - 7 >= str2_global_offset) {
+                
+                long long str1_chunk;
+                memcpy(&str1_chunk, &str1p[k], sizeof(long long));
 
-            __m256i char2_vec = _mm256_set_epi32(
-                (unsigned char)str2p[wave - (k + 7)], 
-                (unsigned char)str2p[wave - (k + 6)], 
-                (unsigned char)str2p[wave - (k + 5)], 
-                (unsigned char)str2p[wave - (k + 4)], 
-                (unsigned char)str2p[wave - (k + 3)], 
-                (unsigned char)str2p[wave - (k + 2)], 
-                (unsigned char)str2p[wave - (k + 1)], 
-                (unsigned char)str2p[wave - (k)]
-            );
+                __m128i s1_vec = _mm_cvtsi64_si128(str1_chunk);
+                __m256i char1_vec = _mm256_cvtepu8_epi32(s1_vec);
 
-            // Compare characters to each other
-            __m256i v_match = _mm256_cmpeq_epi32(char1_vec, char2_vec);
+                __m256i char2_vec = _mm256_set_epi32(
+                    (unsigned char)str2p[wave - (k + 7)], 
+                    (unsigned char)str2p[wave - (k + 6)], 
+                    (unsigned char)str2p[wave - (k + 5)], 
+                    (unsigned char)str2p[wave - (k + 4)], 
+                    (unsigned char)str2p[wave - (k + 3)], 
+                    (unsigned char)str2p[wave - (k + 2)], 
+                    (unsigned char)str2p[wave - (k + 1)], 
+                    (unsigned char)str2p[wave - (k)]
+                );
 
-            // Calculate cost
-            __m256i v_cost_sub = _mm256_add_epi32(vec_sub, v_ones);
-            // __m256i v_match_mask = _mm256_and_si256(v_match, v_ones); // 1 if match, 0 if not
-            // __m256i v_cost_match = _mm256_sub_epi32(v_ones, v_match_mask); // 1 if no match, 0 if not
-            v_cost_sub = _mm256_add_epi32(v_cost_sub, v_match);
+                __m256i vec_ins = _mm256_loadu_si256((__m256i*)&d_prev[k]);
+                __m256i vec_del = _mm256_loadu_si256((__m256i*)&d_prev[k - 1]);
+                __m256i vec_sub = _mm256_loadu_si256((__m256i*)&d_prevprev[k - 1]);
 
-            __m256i v_cost_ins = _mm256_add_epi32(vec_ins, v_ones);
-            __m256i v_cost_del = _mm256_add_epi32(vec_del, v_ones);
-            __m256i v_result = avx_min3(v_cost_del, v_cost_ins, v_cost_sub);
+                // Compare characters and calculate cost
+                __m256i v_match = _mm256_cmpeq_epi32(char1_vec, char2_vec);
+                __m256i v_cost_sub = _mm256_add_epi32(vec_sub, v_ones);
+                v_cost_sub = _mm256_add_epi32(v_cost_sub, v_match);
 
-            _mm256_storeu_si256((__m256i*)&d_curr[k], v_result);
+                __m256i v_cost_ins = _mm256_add_epi32(vec_ins, v_ones);
+                __m256i v_cost_del = _mm256_add_epi32(vec_del, v_ones);
+                __m256i v_result = avx_min3(v_cost_del, v_cost_ins, v_cost_sub);
+
+                _mm256_storeu_si256((__m256i*)&d_curr[k], v_result);
+
+            } else {
+                // Fall back to scalar loop
+                break;
+            }
+            
         }
 
-        // Clean up in case of nonalignment with tile size
+        // Scalar loop for bounds
         for (; k <= i_max; k++) {
             int prev_del = d_prev[k-1];
             int prev_ins = d_prev[k];
             int prev_sub = d_prevprev[k-1];
 
-            size_t str1_idx = str1_global_offset + k;
-            size_t str2_idx = str2_global_offset + wave - k;
+            size_t global_str1_idx = str1_global_offset + k;
+            size_t global_str2_idx = str2_global_offset + wave - k;
 
-            // Bounds checking for safety
             int c = 0;
-            if (str1_idx < len1 && str2_idx < len2) {
+            if (global_str1_idx < len1 && global_str2_idx < len2) {
                 c = cost(str1p[k], str2p[wave - k]);
             } else {
-                c = 1; // Cost of mismatch for out-of-bounds
+                c = 1; // Out-of-bounds mismatch cost
             }
 
             int val = min3(prev_del + 1, prev_ins + 1, prev_sub + c);
-
             d_curr[k] = val;
         }
 
-        // Export edge values for inter-tile operations
+        // Export edge values
         size_t start = i_min;
         size_t end = i_max;
 
@@ -193,9 +205,9 @@ void *worker_thread(void *arg) {
     // Extract values from ThreadArgs
     const char *str1 = args->str1;
     const char *str2 = args->str2;
-    int *row_edge = args->row_edge;
-    int *col_edge = args->col_edge;
-    int *corners = args->corners;
+    int *g_top_row = args->g_top_row;
+    int *g_left_col = args->g_left_col;
+    int **vdp = args->vdp;
     size_t len1 = args->len1;
     size_t len2 = args->len2;
     size_t tile_size = args->tile_size;
@@ -216,6 +228,14 @@ void *worker_thread(void *arg) {
         for (size_t ti = ti_min + thread_id; ti <= ti_max; ti += num_threads) {
 
             size_t tj = wave - ti;
+            size_t tile_idx = ti * num_tiles_j + tj;
+
+            if (vdp[tile_idx] == NULL) {
+                vdp[tile_idx] = (int *)malloc(2 * tile_size * sizeof(int));
+                if (vdp[tile_idx] == NULL) {
+                    return NULL; // malloc failed
+                }
+            }
 
             // Determine the tile indices and dimensions
             size_t i_start = ti * tile_size + 1;
@@ -232,20 +252,48 @@ void *worker_thread(void *arg) {
             if (ti == 0 && tj == 0) {
                 current_corner = 0;
             } else if (ti == 0) {
-                current_corner = row_edge[j_start - 1];
+                current_corner = g_top_row[j_start - 1];
             } else if (tj == 0) {
-                current_corner = col_edge[i_start - 1];
+                current_corner = g_left_col[i_start - 1];
             } else {
-                current_corner = corners[tj - 1];
+                size_t diag_tile_idx = (ti - 1) * num_tiles_j + (tj - 1);
+                current_corner = vdp[diag_tile_idx][tile_size - 1];
+            }
+
+            int *row_edge_for_tile = (int *)malloc((tile_size + 1) * sizeof(int));
+            int *col_edge_for_tile = (int *)malloc((tile_size + 1) * sizeof(int));
+
+            // Copy top row
+            if (ti == 0) {
+                for (size_t k = 0; k < tile_width; k++) {
+                    row_edge_for_tile[k] = g_top_row[j_start + k];
+                }
+            } else {
+                size_t up_tile_idx = (ti - 1) * num_tiles_j + tj;
+                for (size_t k = 0; k < tile_width; k++) {
+                    row_edge_for_tile[k] = vdp[up_tile_idx][k];  // Bottom of up-tile
+                }
+            }
+
+            // Copy left column
+            if (tj == 0) {
+                for (size_t k = 0; k < tile_height; k++) {
+                    col_edge_for_tile[k] = g_left_col[i_start + k];
+                }
+            } else {
+                size_t left_tile_idx = ti * num_tiles_j + (tj - 1);
+                for (size_t k = 0; k < tile_height; k++) {
+                    col_edge_for_tile[k] = vdp[left_tile_idx][tile_size + k];  // Right of left-tile
+                }
             }
 
             // Bottom right corner
-            int next_corner = row_edge[j_start + tile_width - 1];
+            // int next_corner = g_top_row[j_start + tile_width - 1];
 
             // Intra-tile computation
             compute_tile_avx(
-                &str1[i_start - 1], 
-                &str2[j_start - 1],
+                str1, 
+                str2,
                 tile_height, 
                 tile_width, 
                 i_start - 1,
@@ -253,16 +301,31 @@ void *worker_thread(void *arg) {
                 len1,
                 len2,
                 current_corner, 
-                &row_edge[j_start], 
-                &col_edge[i_start], 
-                &corners[tj]
+                row_edge_for_tile, 
+                col_edge_for_tile, 
+                &vdp[tile_idx][tile_size - 1]
             );
 
-            corners[tj] = next_corner;
+            
+            // Copy output boundaries to vdp
+            for (size_t k = 0; k < tile_width; k++) {
+                vdp[tile_idx][k] = row_edge_for_tile[k];
+            }
+            for (size_t k = 0; k < tile_height; k++) {
+                vdp[tile_idx][tile_size + k] = col_edge_for_tile[k];
+            }
+
+            // If this is the bottom-right tile, store the answer
+            if (ti == num_tiles_i - 1 && tj == num_tiles_j - 1) {
+                vdp[tile_idx][tile_size - 1] = row_edge_for_tile[tile_width - 1];
+            }
+
+            free(row_edge_for_tile);
+            free(col_edge_for_tile);
         }
 
-        // Wait until other threads finish intra-tile operations
         pthread_barrier_wait(args->barrier);
+
     }
 
     return NULL;
@@ -276,24 +339,32 @@ int edit_distance_base(const char *str1, const char *str2, size_t len1, size_t l
     size_t num_tiles_j = (len2 + tile_size - 1) / tile_size;
 
     // Allocate buffers for tile edges and corner values
-    size_t max_len = max(len1, len2);
-    int *row_edge = (int *)malloc((max_len + 1) * sizeof(int));
-    int *col_edge = (int *)malloc((max_len + 1) * sizeof(int));
-    int *corners = (int *)malloc(num_tiles_j * sizeof(int));
+    // size_t max_len = max(len1, len2);
+    // int *row_edge = (int *)malloc((max_len + 1) * sizeof(int));
+    // int *col_edge = (int *)malloc((max_len + 1) * sizeof(int));
+    int **vdp = (int **)malloc(num_tiles_i * num_tiles_j * sizeof(int *));
 
-    if (!row_edge || !col_edge || !corners) {
-        free(row_edge);
-        free(col_edge);
-        free(corners);
+    // Global boundary arrays
+    int *g_top_row = (int *)malloc((len2 + 1) * sizeof(int));
+    int *g_left_col = (int *)malloc((len1 + 1) * sizeof(int));
+
+    if (!vdp || !g_top_row || !g_left_col) {
+        free(vdp);
+        free(g_top_row);
+        free(g_left_col);
         return -1;
     }
 
     // Initialize row and column edges
     for (size_t k = 0; k <= len2; k++) {
-        row_edge[k] = k;
+        g_top_row[k] = k;
     }
     for (size_t k = 0; k <= len1; k++) {
-        col_edge[k] = k;
+        g_left_col[k] = k;
+    }
+
+    for (size_t i = 0; i < num_tiles_i * num_tiles_j; i++) {
+        vdp[i] = NULL;
     }
 
     // Limit the number of threads
@@ -302,9 +373,9 @@ int edit_distance_base(const char *str1, const char *str2, size_t len1, size_t l
     if (num_threads > min_dimension) {
         num_threads = min_dimension;
     }
-    if (max_len <= tile_size) {
-        num_threads = 1;
-    }
+
+    printf("Tile size: %zu\n", tile_size);
+    printf("Number of threads: %zu\n", num_threads);
 
     pthread_t threads[num_threads];
     struct ThreadArgs t_args[num_threads];
@@ -315,15 +386,18 @@ int edit_distance_base(const char *str1, const char *str2, size_t len1, size_t l
     // Spawn worker threads
     for (size_t i = 0; i < num_threads; i++) {
         t_args[i].barrier = &barrier;
+
         t_args[i].str1 = str1;
         t_args[i].str2 = str2;
-        t_args[i].row_edge = row_edge;
-        t_args[i].col_edge = col_edge;
-        t_args[i].corners = corners;
 
+        t_args[i].g_top_row = g_top_row;
+        t_args[i].g_left_col = g_left_col;
+        t_args[i].vdp = vdp;
+
+        t_args[i].tile_size = tile_size;
         t_args[i].len1 = len1;
         t_args[i].len2 = len2;
-        t_args[i].tile_size = tile_size;
+
         t_args[i].num_tiles_i = num_tiles_i;
         t_args[i].num_tiles_j = num_tiles_j;
 
@@ -337,13 +411,19 @@ int edit_distance_base(const char *str1, const char *str2, size_t len1, size_t l
         pthread_join(threads[i], NULL);
     }
 
-    int result = row_edge[len2];
-
     pthread_barrier_destroy(&barrier);
 
-    free(row_edge);
-    free(col_edge);
-    free(corners);
+    int result = vdp[num_tiles_i * num_tiles_j - 1][tile_size - 1];
+
+    for (size_t i = 0; i < num_tiles_i * num_tiles_j; i++) {
+        if (vdp[i] != NULL) {
+            free(vdp[i]);
+        }
+    }
+
+    free(vdp);
+    free(g_top_row);
+    free(g_left_col);
     
     return result;
 }
@@ -382,9 +462,6 @@ int edit_distance(const char *str1, const char *str2, size_t len1, size_t len2) 
     size_t num_threads = (size_t)nproc;
     size_t min_tiles = min(num_tiles_i, num_tiles_j);
     if (num_threads > min_tiles) num_threads = min_tiles;
-
-    printf("Tile size: %zu\n", tile_size);
-    printf("Number of threads: %zu\n", num_threads);
 
     return edit_distance_base(str1, str2, len1, len2, tile_size, num_threads);
 }
