@@ -1,0 +1,169 @@
+START: Tue Dec  9 10:41:22 PM EST 2025
+
+Expected edit distance between "" and "": 0
+Calculated edit distance between "" and "": 0
+TEST: PASS
+
+Expected edit distance between "a" and "a": 0
+Calculated edit distance between "a" and "a": 0
+TEST: PASS
+
+Expected edit distance between "a" and "b": 1
+Calculated edit distance between "a" and "b": 1
+TEST: PASS
+
+Expected edit distance between "ab" and "ab": 0
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "ab" and "ab": 0
+TEST: PASS
+
+Expected edit distance between "ab" and "ba": 2
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "ab" and "ba": 2
+TEST: PASS
+
+Expected edit distance between "ab" and "ba": 2
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "ab" and "ba": 2
+TEST: PASS
+
+Expected edit distance between "book" and "back": 2
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "book" and "back": 2
+TEST: PASS
+
+Expected edit distance between "elephant" and "relevant": 3
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "elephant" and "relevant": 3
+TEST: PASS
+
+Expected edit distance between "margatroid" and "margatroid": 0
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "margatroid" and "margatroid": 0
+TEST: PASS
+
+Expected edit distance between "margatroid" and "spellcheck": 10
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "margatroid" and "spellcheck": 10
+TEST: PASS
+
+Total elapsed time: 0.381408 ms
+Expected edit distance between "" and "": 0
+Calculated edit distance between "" and "": 0
+TEST: PASS
+
+Expected edit distance between "a" and "a": 0
+Calculated edit distance between "a" and "a": 0
+TEST: PASS
+
+Expected edit distance between "a" and "b": 1
+Calculated edit distance between "a" and "b": 1
+TEST: PASS
+
+Expected edit distance between "ab" and "ab": 0
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "ab" and "ab": 0
+TEST: PASS
+
+Expected edit distance between "ab" and "ba": 2
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "ab" and "ba": 2
+TEST: PASS
+
+Expected edit distance between "ab" and "ba": 2
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "ab" and "ba": 2
+TEST: PASS
+
+Expected edit distance between "book" and "back": 2
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "book" and "back": 2
+TEST: PASS
+
+Expected edit distance between "elephant" and "relevant": 3
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "elephant" and "relevant": 3
+TEST: PASS
+
+Expected edit distance between "margatroid" and "margatroid": 0
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "margatroid" and "margatroid": 0
+TEST: PASS
+
+Expected edit distance between "margatroid" and "spellcheck": 10
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "margatroid" and "spellcheck": 10
+TEST: PASS
+
+Total elapsed time: 0.304701 ms
+Expected edit distance between "" and "": 0
+Calculated edit distance between "" and "": 0
+TEST: PASS
+
+Expected edit distance between "a" and "a": 0
+Calculated edit distance between "a" and "a": 0
+TEST: PASS
+
+Expected edit distance between "a" and "b": 1
+Calculated edit distance between "a" and "b": 1
+TEST: PASS
+
+Expected edit distance between "ab" and "ab": 0
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "ab" and "ab": 0
+TEST: PASS
+
+Expected edit distance between "ab" and "ba": 2
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "ab" and "ba": 2
+TEST: PASS
+
+Expected edit distance between "ab" and "ba": 2
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "ab" and "ba": 2
+TEST: PASS
+
+Expected edit distance between "book" and "back": 2
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "book" and "back": 2
+TEST: PASS
+
+Expected edit distance between "elephant" and "relevant": 3
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "elephant" and "relevant": 3
+TEST: PASS
+
+Expected edit distance between "margatroid" and "margatroid": 0
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "margatroid" and "margatroid": 0
+TEST: PASS
+
+Expected edit distance between "margatroid" and "spellcheck": 10
+Tile size: 64
+Number of threads: 1
+Calculated edit distance between "margatroid" and "spellcheck": 10
+TEST: PASS
+
+Total elapsed time: 0.281276 ms
+END: Tue Dec  9 10:41:22 PM EST 2025
+
