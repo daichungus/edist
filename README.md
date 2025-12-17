@@ -2,8 +2,9 @@
 A Levenshtein edit distance calculator utilizing multithreading and AVX2.
 # Requirements
 - Currently, this only runs on systems based on the Linux kernel and x86 CPU's that support AVX2
+- You must install either `gcc` or `clang` to compile this program
 - Right now, only strings of the exact same length are supported
 # Build instructions
 1. Clone this repo and `cd edist`
-2. Run `make`
+2. Run `make` (to use clang, add `CC=clang`)
 3. To run the program, `./edist`
