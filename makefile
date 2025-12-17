@@ -1,23 +1,23 @@
-CC_GCC := gcc
+CC ?= gcc
 
 CFLAGS := -O3 -pthread -mavx -mfma -march=native -Wall -Wextra -Werror
 
 SRCS := main.c edit_distance.c test_edit_distance.c tile_calculator.c
 
-OBJS_GCC := $(SRCS:.c=.o)
+OBJS := $(SRCS:.c=.o)
 
-TARGET_GCC := edist
+TARGET := edist
 
-all: $(TARGET_GCC)
+all: $(TARGET)
 
-$(TARGET_GCC): $(OBJS_GCC)
-	$(CC_GCC) $(CFLAGS) -o $@ $^
-	rm -f *.o
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^
+	rm $(OBJS)
 
-%.gcc.o: %.c
-	$(CC_GCC) $(CFLAGS) -c -o $@ $< 
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
-	rm -f $(TARGET_GCC) *.o
+	rm -f $(TARGET) *.o
 
 .PHONY: all clean
