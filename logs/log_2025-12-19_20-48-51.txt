@@ -1,0 +1,28 @@
+START: Fri Dec 19 08:48:51 PM PST 2025
+
+Length: 1000000
+Finding best tile size...
+Elapsed time: 2.319968 s
+Tile size: 2048
+Number of threads: 8
+Calculated edit distance: 625921
+Total elapsed time: 25.109801 s
+
+Length: 1000000
+Finding best tile size...
+Elapsed time: 2.323923 s
+Tile size: 2048
+Number of threads: 8
+Calculated edit distance: 625722
+Total elapsed time: 25.077375 s
+
+Length: 1000000
+Finding best tile size...
+Elapsed time: 2.327179 s
+Tile size: 2048
+Number of threads: 8
+Calculated edit distance: 625940
+Total elapsed time: 25.146643 s
+
+END: Fri Dec 19 08:50:07 PM PST 2025
+
