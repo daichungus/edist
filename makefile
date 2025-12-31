@@ -1,6 +1,6 @@
 CC ?= gcc
 
-CFLAGS := -O3 -pthread -mavx -mfma -march=native -Wall -Wextra -Werror
+CFLAGS := -O3 -pthread -mavx -mavx2 -mfma -march=native -Wall -Wextra -Werror
 
 SRCS := main.c edit_distance.c test_edit_distance.c tile_calculator.c
 
