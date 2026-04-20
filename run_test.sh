@@ -1,5 +1,4 @@
 #!/bin/bash
-make clean
 make
 
 LOG_DIR="./logs"
@@ -12,10 +11,11 @@ printf "START: " | tee -a "$LOG_FILE"
 date | tee -a "$LOG_FILE"
 echo | tee -a "$LOG_FILE"
 
-N="10"
+N="3"
+LEN="10000"
 for i in $(seq 1 $N)
 do
-	./edist | tee -a "$LOG_FILE"
+	./edist -n $LEN | tee -a "$LOG_FILE"
 	echo | tee -a "$LOG_FILE"
 done 
 
