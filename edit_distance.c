@@ -57,7 +57,9 @@ static inline __m256i avx_min3(__m256i a, __m256i b, __m256i c) {
 }
 
 // Inter-tile operation
-void compute_tile_avx(const char *str1p, const char *str2p, size_t tile_size, size_t h, size_t w, int topleft, int *row_edgep, int *col_edgep, int *corner_outp) {
+void compute_tile_avx(const char *str1p, const char *str2p, size_t tile_size,
+	size_t h, size_t w, int topleft, int *row_edgep, int *col_edgep,
+	int *corner_outp) {
 
 	// AVX diagonal buffers
 	__attribute__((aligned(32))) int buffer_prevprev[tile_size + 8];
@@ -246,7 +248,8 @@ void *worker_thread(void *arg) {
 }
 
 // Calculate edit distance with specific tile size and number of threads
-int edit_distance_base(const char *str1, const char *str2, size_t len, size_t tile_size, size_t num_threads) {
+int edit_distance_base(const char *str1, const char *str2, size_t len,
+	size_t tile_size, size_t num_threads) {
 	
 	// Determine number of tiles needed
 	size_t num_tiles_i = (len + tile_size - 1) / tile_size;
