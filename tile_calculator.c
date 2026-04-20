@@ -32,53 +32,53 @@ static inline void printf_ns(long t) {
 
 // Helper to generate dummy data
 static inline char *gen_dummy(size_t len) {
-    char *s = malloc(len + 1);
-    memset(s, 'A', len);
-    s[len] = '\0';
-    return s;
+	char *s = malloc(len + 1);
+	memset(s, 'A', len);
+	s[len] = '\0';
+	return s;
 }
 
 // Calculate the most curenntly fastest tile size. 
 // May not always be the absolute fastest due to CPU processes and environmental variables
 size_t calculate_tile() {
 	long t0 = now_ns();
-    const size_t BENCH_LEN = 32768; 
-    char *s1 = gen_dummy(BENCH_LEN);
-    char *s2 = gen_dummy(BENCH_LEN);
+	const size_t BENCH_LEN = 32768; 
+	char *s1 = gen_dummy(BENCH_LEN);
+	char *s2 = gen_dummy(BENCH_LEN);
 
-    size_t candidates[] = {64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
-    size_t num_candidates = sizeof(candidates) / sizeof(candidates[0]);
+	size_t candidates[] = {64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
+	size_t num_candidates = sizeof(candidates) / sizeof(candidates[0]);
 
-    long best_time = LONG_MAX;
-    size_t best_size = 2048;
+	long best_time = LONG_MAX;
+	size_t best_size = 2048;
 
-    printf("Finding best tile size...\n");
+	printf("Finding best tile size...\n");
 
-    for (size_t i = 0; i < num_candidates; i++) {
-        size_t ts = candidates[i];
+	for (size_t i = 0; i < num_candidates; i++) {
+		size_t ts = candidates[i];
 
-        if (ts > BENCH_LEN) continue;
+		if (ts > BENCH_LEN) continue;
 
-        long t0 = now_ns();
+		long t0 = now_ns();
 
-        edit_distance_base(s1, s2, BENCH_LEN, ts, 1);
+		edit_distance_base(s1, s2, BENCH_LEN, ts, 1);
 
-        long t1 = now_ns();
-        long time = t1 - t0;
+		long t1 = now_ns();
+		long time = t1 - t0;
 
-        if (time < best_time) {
-            best_time = time;
-            best_size = ts;
-        }
-        
-    }
+		if (time < best_time) {
+			best_time = time;
+			best_size = ts;
+		}
+		
+	}
 	
 	long t1 = now_ns();
 	printf("Elapsed time: ");
 	printf_ns(t1 - t0);
 
-    free(s1);
-    free(s2);
-    
-    return best_size;
+	free(s1);
+	free(s2);
+	
+	return best_size;
 }

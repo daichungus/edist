@@ -12,7 +12,7 @@ printf "START: " | tee -a "$LOG_FILE"
 date | tee -a "$LOG_FILE"
 echo | tee -a "$LOG_FILE"
 
-N="3"
+N="10"
 for i in $(seq 1 $N)
 do
 	./edist | tee -a "$LOG_FILE"
