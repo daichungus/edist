@@ -96,18 +96,18 @@ void compute_tile_avx(const char *str1p, const char *str2p, size_t tile_size,
 
 		size_t k = i_min;
 		for (; k + 7 <= i_max; k += 8) {
-			__m256i vec_ins = _mm256_loadu_si256((__m256i*)&d_prev[k]);
-			__m256i vec_del = _mm256_loadu_si256((__m256i*)&d_prev[k - 1]);
-			__m256i vec_sub = _mm256_loadu_si256((__m256i*)&d_prevprev[k - 1]);
+			__m256i v_ins = _mm256_loadu_si256((__m256i*)&d_prev[k]);
+			__m256i v_del = _mm256_loadu_si256((__m256i*)&d_prev[k - 1]);
+			__m256i v_sub = _mm256_loadu_si256((__m256i*)&d_prevprev[k - 1]);
 
 			// Load string 1 and string 2 chunks
 			long long str1_chunk;
 			memcpy(&str1_chunk, &str1p[k], sizeof(long long));
 
 			__m128i s1_vec = _mm_cvtsi64_si128(str1_chunk);
-			__m256i char1_vec = _mm256_cvtepu8_epi32(s1_vec);
+			__m256i c1_vec = _mm256_cvtepu8_epi32(s1_vec);
 
-			__m256i char2_vec = _mm256_set_epi32(
+			__m256i c2_vec = _mm256_set_epi32(
 				(unsigned char)str2p[wave - (k + 7)], 
 				(unsigned char)str2p[wave - (k + 6)], 
 				(unsigned char)str2p[wave - (k + 5)], 
@@ -119,16 +119,16 @@ void compute_tile_avx(const char *str1p, const char *str2p, size_t tile_size,
 			);
 
 			// Compare characters to each other
-			__m256i v_match = _mm256_cmpeq_epi32(char1_vec, char2_vec);
+			__m256i v_match = _mm256_cmpeq_epi32(c1_vec, c2_vec);
 
 			// Calculate cost
-			__m256i v_cost_sub = _mm256_add_epi32(vec_sub, v_ones);
-			v_cost_sub = _mm256_add_epi32(v_cost_sub, v_match);
-			__m256i v_cost_ins = _mm256_add_epi32(vec_ins, v_ones);
-			__m256i v_cost_del = _mm256_add_epi32(vec_del, v_ones);
-			__m256i v_result = avx_min3(v_cost_del, v_cost_ins, v_cost_sub);
+			__m256i cost_sub = _mm256_add_epi32(v_sub, v_ones);
+			cost_sub = _mm256_add_epi32(cost_sub, v_match);
+			__m256i cost_ins = _mm256_add_epi32(v_ins, v_ones);
+			__m256i cost_del = _mm256_add_epi32(v_del, v_ones);
+			__m256i result = avx_min3(cost_del, cost_ins, cost_sub);
 
-			_mm256_storeu_si256((__m256i*)&d_curr[k], v_result);
+			_mm256_storeu_si256((__m256i*)&d_curr[k], result);
 		}
 
 		// Clean up in case of nonalignment with tile size
