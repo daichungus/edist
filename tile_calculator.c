@@ -6,14 +6,12 @@
 #include "tile_calculator.h"
 #include "edit_distance.h"
 
-// Return the time in nanoseconds
 static inline long now_ns(void) {
 	struct timespec ts;
 	clock_gettime(CLOCK_MONOTONIC, &ts);
 	return ts.tv_sec * 1000000000L + ts.tv_nsec;
 }
 
-// Format the elapsed time
 static inline void printf_ns(long t) {
 	if (t > 3.6e+12) {
 		printf("%.6Lf hr\n", t / 3.6e+12L);
@@ -30,7 +28,6 @@ static inline void printf_ns(long t) {
 	}
 }
 
-// Helper to generate dummy data
 static inline char *gen_dummy(size_t len) {
 	char *s = malloc(len + 1);
 	memset(s, 'A', len);
@@ -38,8 +35,11 @@ static inline char *gen_dummy(size_t len) {
 	return s;
 }
 
-// Calculate the most curenntly fastest tile size. 
-// May not always be the absolute fastest due to CPU processes and environmental variables
+/* 
+ * Calculate the most most optimal tile dimension. 
+ * May not be as fast as theoretical numbers, 
+ * due to CPU processes and environmental variables.
+ */
 size_t calculate_tile() {
 	long t0 = now_ns();
 	const size_t BENCH_LEN = 32768; 
@@ -50,9 +50,9 @@ size_t calculate_tile() {
 	size_t num_candidates = sizeof(candidates) / sizeof(candidates[0]);
 
 	long best_time = LONG_MAX;
-	size_t best_size = 2048;
+	size_t best_dim = 2048;
 
-	printf("Finding best tile size...\n");
+	printf("Finding best tile dimension...\n");
 
 	for (size_t i = 0; i < num_candidates; i++) {
 		size_t ts = candidates[i];
@@ -68,7 +68,7 @@ size_t calculate_tile() {
 
 		if (time < best_time) {
 			best_time = time;
-			best_size = ts;
+			best_dim = ts;
 		}
 		
 	}
@@ -80,5 +80,5 @@ size_t calculate_tile() {
 	free(s1);
 	free(s2);
 	
-	return best_size;
+	return best_dim;
 }
