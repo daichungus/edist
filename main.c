@@ -36,15 +36,16 @@ int main(int argc, char *argv[]) {
 	long n = - 1;
 
 	const char *optstr = "n:t:b:a";
-	
+	const char *len_error = "Error: n requires positive integer\n";
+
 	int opt;
 
 	while ((opt = getopt(argc, argv, optstr)) != -1) {
 		switch(opt) {
 			case 'n': {
 				n = strtol(optarg, NULL, 10);
-				if (n <= 0) {
-					fprintf(stderr, "Error: n <= 0\n");
+				if (n < 0) {
+					fprintf(stderr, len_error);
 					exit(EXIT_FAILURE);
 				}
 				break;
@@ -68,16 +69,14 @@ int main(int argc, char *argv[]) {
 
 	if (n == -1) {
 		fprintf(stderr, "Error: -n <string_length>\n");
-	} else {
-		t0 = now_ms();
-		test_rand_string(n);
-		t1 = now_ms();
-		printf("Total elapsed time: ");
-		printf_ms(t1 - t0);
+		exit(EXIT_FAILURE);
 	}
 
-	// run_tests_small();
-	// run_test_1mil(); 
+	t0 = now_ms();
+	test_rand_string(n);
+	t1 = now_ms();
+	printf("Total elapsed time: ");
+	printf_ms(t1 - t0);
 
 	return 0;
 }
