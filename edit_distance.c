@@ -15,8 +15,10 @@
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define min3(a, b, c) min(min(a, b), c)
 
-// Calculate optimal tile size
-static inline size_t opt_tilesize(size_t len, size_t num_threads) {
+/*
+ * Calculate optimal tile dimension.
+ */
+static inline size_t opt_tiledim(size_t len, size_t num_threads) {
 	const size_t L1_CACHE_LIMIT = 2048; // Actual L1 limit: 2730 
 	size_t sat_limit = len / num_threads;
 	if (sat_limit < 1) {
@@ -32,7 +34,6 @@ static inline size_t opt_tilesize(size_t len, size_t num_threads) {
 	return optimal;
 }
 
-// Arguments for the threads
 struct ThreadArgs {
 	pthread_barrier_t *barrier;
 	
@@ -43,7 +44,7 @@ struct ThreadArgs {
 	int *corners;
 
 	size_t len;
-	size_t tile_size;
+	size_t tile_dim;
 	size_t num_tiles_i;
 	size_t num_tiles_j;
 
@@ -51,20 +52,22 @@ struct ThreadArgs {
 	size_t num_threads;
 };
 
-// Calculate the minimum of 3 vectors
 static inline __m256i avx_min3(__m256i a, __m256i b, __m256i c) {
 	return _mm256_min_epi32(_mm256_min_epi32(a, b), c);
 }
 
-// Inter-tile operation
-void compute_tile_avx(const char *str1p, const char *str2p, size_t tile_size,
+/*
+ * Inter-tile operation,
+ * returns the calculated tile's edge and pointer values.
+ */
+void compute_tile_avx(const char *str1p, const char *str2p, size_t tile_dim,
 	size_t h, size_t w, int topleft, int *row_edgep, int *col_edgep,
 	int *corner_outp) {
 
 	// AVX diagonal buffers
-	__attribute__((aligned(32))) int buffer_prevprev[tile_size + 8];
-	__attribute__((aligned(32))) int buffer_prev[tile_size + 8];
-	__attribute__((aligned(32))) int buffer_curr[tile_size + 8];
+	__attribute__((aligned(32))) int buffer_prevprev[tile_dim + 8];
+	__attribute__((aligned(32))) int buffer_prev[tile_dim + 8];
+	__attribute__((aligned(32))) int buffer_curr[tile_dim + 8];
 
 	// Pointers to the buffers
 	int *d_prevprev = &buffer_prevprev[1];
@@ -131,7 +134,7 @@ void compute_tile_avx(const char *str1p, const char *str2p, size_t tile_size,
 			_mm256_storeu_si256((__m256i*)&d_curr[k], result);
 		}
 
-		// Clean up in case of nonalignment with tile size
+		// Clean up in case of nonalignment with tile dimension
 		for (; k <= i_max; k++) {
 			int prev_del = d_prev[k-1];
 			int prev_ins = d_prev[k];
@@ -170,6 +173,9 @@ void compute_tile_avx(const char *str1p, const char *str2p, size_t tile_size,
 	}
 }
 
+/*
+ * Assign tile operations to each thread. 
+ */
 void *worker_thread(void *arg) {
 	struct ThreadArgs *args = (struct ThreadArgs *)arg;
 
@@ -180,7 +186,7 @@ void *worker_thread(void *arg) {
 	int *col_edge = args->col_edge;
 	int *corners = args->corners;
 	size_t len = args->len;
-	size_t tile_size = args->tile_size;
+	size_t tile_dim = args->tile_dim;
 	size_t num_tiles_i = args->num_tiles_i;
 	size_t num_tiles_j = args->num_tiles_j;
 	size_t num_threads = args->num_threads;
@@ -200,11 +206,11 @@ void *worker_thread(void *arg) {
 			size_t tj = wave - ti;
 
 			// Determine the tile indices and dimensions
-			size_t i_start = ti * tile_size + 1;
-			size_t j_start = tj * tile_size + 1;
+			size_t i_start = ti * tile_dim + 1;
+			size_t j_start = tj * tile_dim + 1;
 
-			size_t i_end = min(i_start + tile_size - 1, len);
-			size_t j_end = min(j_start + tile_size - 1, len);
+			size_t i_end = min(i_start + tile_dim - 1, len);
+			size_t j_end = min(j_start + tile_dim - 1, len);
 
 			size_t tile_height = i_end - i_start + 1;
 			size_t tile_width = j_end - j_start + 1;
@@ -228,7 +234,7 @@ void *worker_thread(void *arg) {
 			compute_tile_avx(
 				&str1[i_start - 1], 
 				&str2[j_start - 1],
-				tile_size, 
+				tile_dim, 
 				tile_height, 
 				tile_width, 
 				current_corner, 
@@ -247,13 +253,15 @@ void *worker_thread(void *arg) {
 	return NULL;
 }
 
-// Calculate edit distance with specific tile size and number of threads
+/* 
+ * Calculate edit distance with provided tile dimension and number of threads
+ */
 int edit_distance_base(const char *str1, const char *str2, size_t len,
-	size_t tile_size, size_t num_threads) {
+	size_t tile_dim, size_t num_threads) {
 	
 	// Determine number of tiles needed
-	size_t num_tiles_i = (len + tile_size - 1) / tile_size;
-	size_t num_tiles_j = (len + tile_size - 1) / tile_size;
+	size_t num_tiles_i = (len + tile_dim - 1) / tile_dim;
+	size_t num_tiles_j = (len + tile_dim - 1) / tile_dim;
 
 	// Allocate buffers for tile edges and corner values
 	int *row_edge = (int *)malloc((len + 1) * sizeof(int));
@@ -281,7 +289,7 @@ int edit_distance_base(const char *str1, const char *str2, size_t len,
 	if (num_threads > min_dimension) {
 		num_threads = min_dimension;
 	}
-	if (len <= tile_size) {
+	if (len <= tile_dim) {
 		num_threads = 1;
 	}
 
@@ -301,7 +309,7 @@ int edit_distance_base(const char *str1, const char *str2, size_t len,
 		t_args[i].corners = corners;
 
 		t_args[i].len = len;
-		t_args[i].tile_size = tile_size;
+		t_args[i].tile_dim = tile_dim;
 		t_args[i].num_tiles_i = num_tiles_i;
 		t_args[i].num_tiles_j = num_tiles_j;
 
@@ -326,7 +334,10 @@ int edit_distance_base(const char *str1, const char *str2, size_t len,
 	return result;
 }
 
-// Wrapper
+/* 
+ * Wrapper function,
+ * returns the edit distance based on specified length
+ */
 int edit_distance(const char *str1, const char *str2, size_t len) {
 	if (len == 0) {
 		return 0;
@@ -342,19 +353,19 @@ int edit_distance(const char *str1, const char *str2, size_t len) {
 		nproc = 1;
 	}
 
-	size_t tile_size;
+	size_t tile_dim;
 	if (len < 16384) {
-		tile_size = opt_tilesize(len, (size_t)nproc);
+		tile_dim = opt_tiledim(len, (size_t)nproc);
 	} else {
-		tile_size = calculate_tile();
+		tile_dim = calculate_tile();
 	}
 
-	size_t num_tiles_i = (len + tile_size - 1) / tile_size;
+	size_t num_tiles_i = (len + tile_dim - 1) / tile_dim;
 	size_t num_threads = (size_t)nproc;
 	if (num_threads > num_tiles_i) num_threads = num_tiles_i;
 
-	printf("Tile size: %zu\n", tile_size);
+	printf("Tile dimension: %zu\n", tile_dim);
 	printf("Number of threads: %zu\n", num_threads);
 
-	return edit_distance_base(str1, str2, len, tile_size, num_threads);
+	return edit_distance_base(str1, str2, len, tile_dim, num_threads);
 }
