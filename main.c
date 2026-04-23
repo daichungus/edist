@@ -33,10 +33,10 @@ int main(int argc, char *argv[]) {
 	}
 
 	// Default arguments
-	long n = - 1;
+	long n = -1;
 
 	const char *optstr = "n:t:b:a";
-	const char *len_error = "Error: n requires positive integer\n";
+	const char *len_error = "Error: n requires positive integer input.\n";
 
 	int opt;
 
@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
 			case 'n': {
 				n = strtol(optarg, NULL, 10);
 				if (n < 0) {
-					fprintf(stderr, len_error);
+					fprintf(stderr, "%s", len_error);
 					exit(EXIT_FAILURE);
 				}
 				break;
@@ -54,11 +54,10 @@ int main(int argc, char *argv[]) {
 			case 'b':
 			case 'a':
 			case ':': {
-				printf("option needs a value\n");
 				break;
 			}
 			case '?': {
-				printf("unknown option: %c\n", optopt);
+				printf("Unknown option: %c\n", optopt);
 				break;
 			}
 		}
