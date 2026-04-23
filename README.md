@@ -1,10 +1,15 @@
 # edist
-A Levenshtein edit distance calculator utilizing multithreading and AVX2.
+A [Levenshtein edit distance](https://wikipedia.org/wiki/Levenshtein_distance)
+calculator with multithreading and AVX2.
 # Requirements
-- Currently, this only runs on systems based on the Linux kernel and x86 CPU's that support AVX2
-- You must install either `gcc` or `clang` to compile this program
-- Right now, only strings of the exact same length are supported
+- x86 CPU with [AVX2](https://wikipedia.org/wiki/Advanced_Vector_Extensions)
+- A Linux-based or POSIX-compliant operating system
+- A C compiler, such as `gcc` or `clang` 
 # Build instructions
-1. Clone this repo and `cd edist`
+1. Clone this repo and `cd edist/`
 2. Run `make` (to use clang, add `CC=clang`)
-3. To run the program, `./edist`
+# Usage
+To compare a pair of strings, each consisting of randomly generated `n`
+characters:
+
+`./edist -n <string_length>`
