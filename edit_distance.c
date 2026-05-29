@@ -338,22 +338,16 @@ int edit_distance_base(const char *str1, const char *str2, size_t len,
  * Wrapper function,
  * returns the edit distance based on specified length
  */
-int edit_distance(const char *str1, const char *str2, size_t len) {
-	if (len == 0) {
+int edit_distance(const char *str1, const char *str2, size_t len, size_t nproc) {
+	
+	if (len == 0)
 		return 0;
-	}
 
-	if (len == 1) {
+	if (len == 1) 
 		return cost(str1[0], str2[0]);
-	}
-
-	// Set up threads and barrier
-	long nproc = sysconf(_SC_NPROCESSORS_ONLN);
-	if (nproc < 1) {
-		nproc = 1;
-	}
 
 	size_t tile_dim;
+
 	if (len < 16384) {
 		tile_dim = opt_tiledim(len, (size_t)nproc);
 	} else {
@@ -362,7 +356,9 @@ int edit_distance(const char *str1, const char *str2, size_t len) {
 
 	size_t num_tiles_i = (len + tile_dim - 1) / tile_dim;
 	size_t num_threads = (size_t)nproc;
-	if (num_threads > num_tiles_i) num_threads = num_tiles_i;
+	
+	if (num_threads > num_tiles_i)
+		num_threads = num_tiles_i;
 
 	printf("Tile dimension: %zu\n", tile_dim);
 	printf("Number of threads: %zu\n", num_threads);

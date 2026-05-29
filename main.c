@@ -3,9 +3,9 @@
 #include <time.h>
 #include <unistd.h>
 
-void run_tests_small(void);
-void run_test_1mil(void);
-void test_rand_string(size_t len);
+void run_tests_small(size_t nproc);
+void run_test_1mil(size_t nproc);
+void test_rand_string(size_t len, size_t nproc);
 
 static inline double now_ms(void) {
 	struct timespec ts;
@@ -27,16 +27,20 @@ static inline void printf_ms(double t) {
 
 int main(int argc, char *argv[]) {
 
+	const char *noarg_err = "Usage: ./edist -n <string_length> -t <thread_count>\n";
+
 	if (argc == 1) {
-		fprintf(stderr, "Usage: ./edist -n <length>\n");
+		fprintf(stderr, "%s", noarg_err);
 		exit(EXIT_FAILURE);
 	}
 
 	// Default arguments
 	long n = -1;
+	long nproc = sysconf(_SC_NPROCESSORS_ONLN);
 
 	const char *optstr = "n:t:b:a";
 	const char *len_error = "Error: n requires positive integer input.\n";
+	const char *thread_error = "Error: thread arg must be 1 <= t <=";
 
 	int opt;
 
@@ -44,13 +48,26 @@ int main(int argc, char *argv[]) {
 		switch(opt) {
 			case 'n': {
 				n = strtol(optarg, NULL, 10);
+
 				if (n < 0) {
 					fprintf(stderr, "%s", len_error);
 					exit(EXIT_FAILURE);
 				}
+
 				break;
 			}
-			case 't':
+			case 't': {
+			    long thread_arg = strtol(optarg, NULL, 10);
+
+				if ((thread_arg > nproc) || (thread_arg < 1)) {
+					fprintf(stderr, "%s %ld\n", thread_error, nproc);
+					exit(EXIT_FAILURE);
+				}
+
+				nproc = thread_arg;
+
+				break;
+			}
 			case 'b':
 			case 'a':
 			case ':': {
@@ -62,17 +79,22 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
-
-	double t0;
-	double t1;
-
+	
 	if (n == -1) {
-		fprintf(stderr, "Error: -n <string_length>\n");
+		fprintf(stderr, "%s", noarg_err);
 		exit(EXIT_FAILURE);
 	}
 
+	if (nproc <= 0) {
+		fprintf(stderr, "No threads are available\n");
+		exit(EXIT_FAILURE);
+	}
+	
+	double t0;
+	double t1;
+
 	t0 = now_ms();
-	test_rand_string(n);
+	test_rand_string(n, (size_t)nproc);
 	t1 = now_ms();
 	printf("Total elapsed time: ");
 	printf_ms(t1 - t0);
